@@ -141,3 +141,33 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# ---- Project-specific (shift-left: never commit secrets or local data) ----
+# Environment files (only .env.example is allowed)
+.env
+.env.*
+!.env.example
+
+# Local SQLite databases & journals
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+server/data/
+
+# Build output
+dist/
+
+# Keys / certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# OS / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
