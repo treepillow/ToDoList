@@ -1,0 +1,4 @@
+# Shift-left: block commits containing secrets before they reach GitHub.
+files=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$files" ] && exit 0
+echo "$files" | xargs npx secretlint --maskSecrets
