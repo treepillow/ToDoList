@@ -1,37 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import type { NewTask, SortOrder, StatusFilter, Task, TaskChanges } from '../types';
-
-export const UNDO_WINDOW_MS = 5000;
-
-interface PendingDelete {
-  ids: number[];
-  message: string;
-}
+import { useDeferredDelete } from './useDeferredDelete';
 
 /**
- * Owns the task list for the current view.
+ * Owns the tasks of one list for the current view.
  * - Edits are applied optimistically, then the list is re-synced from the server
  *   (which also rolls back a failed change).
- * - Deletes are deferred for UNDO_WINDOW_MS so they can be undone.
+ * - Deletes are deferred so they can be undone.
+ * - `onSynced` runs after every write so other views (list counts) can refresh.
  */
-export function useTasks(status: StatusFilter, sort: SortOrder) {
+export function useTasks(listId: number | null, status: StatusFilter, sort: SortOrder, onSynced?: () => void) {
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [saveError, setSaveError] = useState(false);
-  const [pending, setPending] = useState<PendingDelete | null>(null);
 
-  const pendingRef = useRef<PendingDelete | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const latestRequest = useRef(0);
-  const viewRef = useRef({ status, sort });
-  viewRef.current = { status, sort };
+  const viewRef = useRef({ listId, status, sort });
+  viewRef.current = { listId, status, sort };
+  const onSyncedRef = useRef(onSynced);
+  onSyncedRef.current = onSynced;
 
   const refresh = useCallback(async () => {
+    const { listId, ...query } = viewRef.current;
+    if (listId === null) return;
     const requestId = ++latestRequest.current;
     try {
-      const data = await api.listTasks(viewRef.current);
-      // Drop stale responses when several refreshes overlap.
+      const data = await api.listTasks(listId, query);
+      // Drop stale responses when several refreshes overlap (or the list changed).
       if (requestId === latestRequest.current) {
         setTasks(data);
         setLoadError(false);
@@ -41,9 +37,20 @@ export function useTasks(status: StatusFilter, sort: SortOrder) {
     }
   }, []);
 
+  const shownListId = useRef(listId);
   useEffect(() => {
+    // Don't flash the previous list's tasks while the new list loads.
+    if (shownListId.current !== listId) {
+      shownListId.current = listId;
+      setTasks(null);
+    }
     void refresh();
-  }, [status, sort, refresh]);
+  }, [listId, status, sort, refresh]);
+
+  const afterWrite = useCallback(async () => {
+    await refresh();
+    onSyncedRef.current?.();
+  }, [refresh]);
 
   const mutate = useCallback(
     async (optimistic: (tasks: Task[]) => Task[], request: () => Promise<unknown>) => {
@@ -54,26 +61,28 @@ export function useTasks(status: StatusFilter, sort: SortOrder) {
       } catch {
         setSaveError(true);
       }
-      await refresh();
+      await afterWrite();
     },
-    [refresh],
+    [afterWrite],
   );
 
   const create = useCallback(
     async (task: NewTask): Promise<boolean> => {
+      const { listId } = viewRef.current;
+      if (listId === null) return false;
       let ok = true;
       try {
-        const created = await api.createTask(task);
+        const created = await api.createTask(listId, task);
         setTasks((current) => current && [...current, created]);
         setSaveError(false);
       } catch {
         setSaveError(true);
         ok = false;
       }
-      await refresh();
+      await afterWrite();
       return ok;
     },
-    [refresh],
+    [afterWrite],
   );
 
   const update = useCallback(
@@ -88,7 +97,8 @@ export function useTasks(status: StatusFilter, sort: SortOrder) {
   /** Moves `id` next to `targetId`. Works on the full list so hidden (pending-delete) rows keep their place. */
   const move = useCallback(
     (id: number, targetId: number, placement: 'before' | 'after') => {
-      if (id === targetId || !tasks) return;
+      const { listId } = viewRef.current;
+      if (id === targetId || !tasks || listId === null) return;
       const without = tasks.filter((t) => t.id !== id);
       const moving = tasks.find((t) => t.id === id);
       const targetIndex = without.findIndex((t) => t.id === targetId);
@@ -96,65 +106,29 @@ export function useTasks(status: StatusFilter, sort: SortOrder) {
       without.splice(placement === 'before' ? targetIndex : targetIndex + 1, 0, moving);
       return mutate(
         () => without,
-        () => api.reorder(without.map((t) => t.id)),
+        () => api.reorder(listId, without.map((t) => t.id)),
       );
     },
     [tasks, mutate],
   );
 
-  const commitPending = useCallback(
-    async ({ keepalive = false } = {}) => {
-      const current = pendingRef.current;
-      if (!current) return;
-      clearTimeout(timerRef.current);
-      pendingRef.current = null;
-      setPending(null);
-      const results = await Promise.allSettled(current.ids.map((id) => api.deleteTask(id, { keepalive })));
-      if (results.some((r) => r.status === 'rejected')) setSaveError(true);
-      if (!keepalive) await refresh();
-    },
-    [refresh],
-  );
-
-  const remove = useCallback(
-    (ids: number[], message: string) => {
-      if (ids.length === 0) return;
-      void commitPending(); // only one undo at a time, like Notion
-      const next = { ids, message };
-      pendingRef.current = next;
-      setPending(next);
-      timerRef.current = setTimeout(() => void commitPending(), UNDO_WINDOW_MS);
-    },
-    [commitPending],
-  );
-
-  const undo = useCallback(() => {
-    clearTimeout(timerRef.current);
-    pendingRef.current = null;
-    setPending(null);
-  }, []);
-
-  // Don't lose a pending delete if the tab closes during the undo window.
-  useEffect(() => {
-    const flush = () => void commitPending({ keepalive: true });
-    window.addEventListener('pagehide', flush);
-    return () => window.removeEventListener('pagehide', flush);
-  }, [commitPending]);
-
-  const hidden = new Set(pending?.ids);
-  const visible = tasks?.filter((t) => !hidden.has(t.id)) ?? null;
+  const deletes = useDeferredDelete(async (ids, { keepalive }) => {
+    const results = await Promise.allSettled(ids.map((id) => api.deleteTask(id, { keepalive })));
+    if (results.some((r) => r.status === 'rejected')) setSaveError(true);
+    if (!keepalive) await afterWrite();
+  });
 
   return {
-    tasks: visible,
+    tasks: tasks?.filter((t) => !deletes.hiddenIds.has(t.id)) ?? null,
     loadError,
     saveError,
     dismissSaveError: () => setSaveError(false),
-    pendingDelete: pending,
+    pendingDelete: deletes.pending,
     refresh,
     create,
     update,
     move,
-    remove,
-    undo,
+    remove: deletes.schedule,
+    undo: deletes.undo,
   };
 }

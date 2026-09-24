@@ -1,11 +1,17 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { fakeServer } from './test/fakeServer';
 
 beforeEach(() => {
-  vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  localStorage.clear();
+  // Desktop-width viewport (sidebar open), light OS theme.
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: query.includes('min-width'),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -40,7 +46,7 @@ describe('loading', () => {
     await user.click(screen.getByRole('menuitemradio', { name: 'Completed' }));
 
     await waitFor(() => expect(rowTitles()).toEqual(['Done']));
-    expect(server.calls.at(-1)?.path).toBe('/api/tasks');
+    expect(server.calls.filter((c) => c.method === 'GET').at(-1)?.path).toBe('/api/lists/1/tasks');
   });
 });
 
@@ -248,7 +254,7 @@ describe('navigation', () => {
   it('does not reload the page when the current page is clicked in the sidebar', async () => {
     fakeServer();
     await renderApp();
-    const link = screen.getByRole('link', { name: /tasks/i, hidden: true }); // sidebar starts closed on narrow test viewport
+    const link = screen.getByRole('link', { name: /^Tasks/ });
     expect(fireEvent.click(link)).toBe(false); // false = default navigation was prevented
   });
 });
@@ -274,5 +280,106 @@ describe('reordering', () => {
     await user.click(screen.getByRole('menuitemradio', { name: 'Priority' }));
 
     await waitFor(() => expect(screen.queryByRole('button', { name: /^Reorder/ })).not.toBeInTheDocument());
+  });
+});
+
+describe('lists in the sidebar', () => {
+  const sidebar = () => within(screen.getByRole('navigation', { name: 'Workspace' }));
+
+  it('switches between lists, showing each list\'s own tasks', async () => {
+    fakeServer([{ title: 'Buy milk' }, { title: 'Lab 2', listId: 2 }], { lists: ['CS301'] });
+    const user = await renderApp();
+    expect(rowTitles()).toEqual(['Buy milk']);
+
+    await user.click(sidebar().getByRole('link', { name: /^CS301/ }));
+
+    expect(await screen.findByRole('button', { name: 'Edit title: Lab 2' })).toBeInTheDocument();
+    expect(rowTitles()).toEqual(['Lab 2']);
+    expect(screen.getByRole('textbox', { name: 'List name' })).toHaveValue('CS301');
+    expect(sidebar().getByRole('link', { name: /^CS301/ })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('adds tasks to the list that is open', async () => {
+    const server = fakeServer([], { lists: ['ESD'] });
+    const user = await renderApp();
+    await user.click(sidebar().getByRole('link', { name: /^ESD/ }));
+    await screen.findByText('No tasks yet');
+
+    await user.type(screen.getByRole('textbox', { name: 'New task' }), 'Draft diagram{Enter}');
+
+    await waitFor(() => expect(server.tasks).toEqual([expect.objectContaining({ title: 'Draft diagram', listId: 2 })]));
+  });
+
+  it('creates a new list and lets you name it straight away', async () => {
+    const server = fakeServer();
+    const user = await renderApp();
+
+    await user.click(sidebar().getByRole('button', { name: 'New list' }));
+
+    // The title input is replaced when the new list opens, so re-query it.
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'List name' })).toHaveValue('Untitled'));
+    expect(screen.getByRole('textbox', { name: 'List name' })).toHaveFocus();
+    await user.keyboard('SE301{Enter}'); // name is pre-selected, so typing replaces it
+
+    await waitFor(() => expect(server.lists.map((l) => l.name)).toEqual(['Tasks', 'SE301']));
+    expect(sidebar().getByRole('link', { name: /^SE301/ })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('renames from the page title; Escape or a blank name keeps the old name', async () => {
+    const server = fakeServer();
+    const user = await renderApp();
+    const title = screen.getByRole('textbox', { name: 'List name' });
+
+    await user.clear(title);
+    await user.type(title, 'Inbox{Enter}');
+    await waitFor(() => expect(server.lists[0]?.name).toBe('Inbox'));
+
+    await user.type(title, ' draft{Escape}');
+    expect(title).toHaveValue('Inbox');
+    await user.clear(title);
+    await user.tab();
+    expect(title).toHaveValue('Inbox');
+    expect(server.calls.filter((c) => c.method === 'PATCH')).toHaveLength(1);
+  });
+
+  it('shows how many open tasks each list has', async () => {
+    fakeServer([{ title: 'A' }, { title: 'B', completed: true }, { title: 'C', listId: 2 }], { lists: ['CS301'] });
+    await renderApp();
+    expect(sidebar().getByRole('link', { name: /^Tasks/ })).toHaveTextContent('1');
+    expect(sidebar().getByRole('link', { name: /^CS301/ })).toHaveTextContent('1');
+  });
+
+  it('deletes a list (and its tasks) with undo, moving to another list', async () => {
+    const server = fakeServer([{ title: 'Lab 2', listId: 2 }], { lists: ['CS301'] });
+    const user = await renderApp();
+    await user.click(sidebar().getByRole('link', { name: /^CS301/ }));
+    await screen.findByRole('button', { name: 'Edit title: Lab 2' });
+
+    await user.click(sidebar().getByRole('button', { name: 'Delete list: CS301' }));
+
+    expect(sidebar().queryByRole('link', { name: /^CS301/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'List name' })).toHaveValue('Tasks');
+    expect(screen.getByRole('status')).toHaveTextContent('Deleted “CS301”');
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(sidebar().getByRole('link', { name: /^CS301/ })).toBeInTheDocument();
+    expect(server.calls.some((c) => c.method === 'DELETE')).toBe(false);
+  });
+
+  it('does not offer to delete the only list', async () => {
+    fakeServer();
+    await renderApp();
+    expect(sidebar().getByRole('button', { name: 'Delete list: Tasks' })).toBeDisabled();
+  });
+
+  it('reopens the list you were last on', async () => {
+    fakeServer([{ title: 'Lab 2', listId: 2 }], { lists: ['CS301'] });
+    const user = await renderApp();
+    await user.click(sidebar().getByRole('link', { name: /^CS301/ }));
+    await screen.findByRole('button', { name: 'Edit title: Lab 2' });
+    cleanup();
+
+    render(<App />);
+    expect(await screen.findByRole('button', { name: 'Edit title: Lab 2' })).toBeInTheDocument();
   });
 });

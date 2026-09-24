@@ -9,6 +9,8 @@ import {
   writeRateLimiter,
   type RateLimitOptions,
 } from './security.js';
+import { createListRepo } from './lists.repo.js';
+import { listsRouter } from './lists.routes.js';
 import { createTaskRepo } from './tasks.repo.js';
 import { tasksRouter } from './tasks.routes.js';
 
@@ -40,7 +42,9 @@ export function createApp({ db, staticDir, writeRateLimit = { windowMs: 60_000, 
   api.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
   });
-  api.use('/tasks', tasksRouter(createTaskRepo(db)));
+  const taskRepo = createTaskRepo(db);
+  api.use('/lists', listsRouter(createListRepo(db), taskRepo));
+  api.use('/tasks', tasksRouter(taskRepo));
   api.use((_req, res) => {
     res.status(404).json({ error: 'Not found' });
   });

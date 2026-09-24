@@ -17,6 +17,18 @@ const migrations = [
      updated_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
    );
    CREATE INDEX idx_tasks_position ON tasks (position);`,
+
+  // v2: multiple lists. Existing tasks move into a default "Tasks" list.
+  `CREATE TABLE lists (
+     id         INTEGER PRIMARY KEY AUTOINCREMENT,
+     name       TEXT    NOT NULL CHECK (length(name) BETWEEN 1 AND 100),
+     position   INTEGER NOT NULL,
+     created_at TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+   );
+   INSERT INTO lists (id, name, position) VALUES (1, 'Tasks', 1);
+   ALTER TABLE tasks ADD COLUMN list_id INTEGER REFERENCES lists (id) ON DELETE CASCADE;
+   UPDATE tasks SET list_id = 1;
+   CREATE INDEX idx_tasks_list ON tasks (list_id, position);`,
 ];
 
 export function openDb(filename: string): Db {

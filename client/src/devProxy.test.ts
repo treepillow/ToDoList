@@ -29,7 +29,7 @@ afterAll(async () => {
 });
 
 it('lets the app write through the dev proxy like a browser would', async () => {
-  const res = await fetch(`${viteOrigin}/api/tasks`, {
+  const res = await fetch(`${viteOrigin}/api/lists/1/tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: viteOrigin, 'Sec-Fetch-Site': 'same-origin' },
     body: JSON.stringify({ title: 'through proxy' }),
@@ -38,7 +38,7 @@ it('lets the app write through the dev proxy like a browser would', async () => 
 });
 
 it('still blocks a cross-site write that arrives through the proxy', async () => {
-  const res = await fetch(`${viteOrigin}/api/tasks`, {
+  const res = await fetch(`${viteOrigin}/api/lists/1/tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Origin: 'https://evil.example', 'Sec-Fetch-Site': 'cross-site' },
     body: JSON.stringify({ title: 'pwned' }),

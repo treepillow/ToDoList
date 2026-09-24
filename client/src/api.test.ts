@@ -14,8 +14,8 @@ afterEach(() => vi.restoreAllMocks());
 describe('api client', () => {
   it('passes filter and sort as query parameters', async () => {
     const fetch = mockFetch(200, []);
-    await api.listTasks({ status: 'completed', sort: 'due' });
-    expect(fetch).toHaveBeenCalledWith('/api/tasks?status=completed&sort=due', expect.anything());
+    await api.listTasks(3, { status: 'completed', sort: 'due' });
+    expect(fetch).toHaveBeenCalledWith('/api/lists/3/tasks?status=completed&sort=due', expect.anything());
   });
 
   it('sends JSON bodies with the right method and content type', async () => {
@@ -35,7 +35,7 @@ describe('api client', () => {
 
   it('throws ApiError carrying the server message and status', async () => {
     mockFetch(400, { error: 'Validation failed' });
-    const error = await api.createTask({ title: '' }).catch((e: unknown) => e);
+    const error = await api.createTask(1, { title: '' }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ status: 400, message: 'Validation failed' });
   });

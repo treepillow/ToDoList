@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { OptionsMenu } from './components/OptionsMenu';
+import { PageTitle } from './components/PageTitle';
 import { Sidebar } from './components/Sidebar';
 import { TaskList } from './components/TaskList';
 import { TaskPanel } from './components/TaskPanel';
-import { Toasts } from './components/Toasts';
+import { Toasts, type UndoToast } from './components/Toasts';
 import { Topbar } from './components/Topbar';
 import { FilterIcon, ListIcon, SortIcon, TasksIcon } from './components/icons';
+import { useLists } from './hooks/useLists';
 import { useTasks } from './hooks/useTasks';
 import { useTheme } from './hooks/useTheme';
-import type { SortOrder, StatusFilter, Task } from './types';
+import type { SortOrder, StatusFilter, Task, TaskList as List } from './types';
 
 const FILTER_OPTIONS = [
   { value: 'all', label: 'All tasks' },
@@ -22,7 +24,25 @@ const SORT_OPTIONS = [
   { value: 'priority', label: 'Priority' },
 ] as const satisfies readonly { value: SortOrder; label: string }[];
 
+const ACTIVE_LIST_KEY = 'activeListId';
+
 const isWide = () => window.matchMedia?.('(min-width: 768px)').matches ?? true;
+
+// Remembering the open list is a convenience; storage may be unavailable.
+const readActiveList = () => {
+  try {
+    return Number(localStorage.getItem(ACTIVE_LIST_KEY)) || null;
+  } catch {
+    return null;
+  }
+};
+const storeActiveList = (id: number) => {
+  try {
+    localStorage.setItem(ACTIVE_LIST_KEY, String(id));
+  } catch {
+    // ignore
+  }
+};
 
 export function App() {
   const { theme, toggle: toggleTheme } = useTheme();
@@ -30,21 +50,61 @@ export function App() {
   const [status, setStatus] = useState<StatusFilter>('all');
   const [sort, setSort] = useState<SortOrder>('position');
   const [openId, setOpenId] = useState<number | null>(null);
+  const [selectedListId, setSelectedListId] = useState<number | null>(readActiveList);
+  const [justCreatedListId, setJustCreatedListId] = useState<number | null>(null);
   const returnFocusTo = useRef<HTMLElement | null>(null);
 
+  const lists = useLists();
+  // Fall back to the first list if the remembered one no longer exists.
+  const activeList = lists.lists?.find((l) => l.id === selectedListId) ?? lists.lists?.[0] ?? null;
+
   const { tasks, loadError, saveError, dismissSaveError, pendingDelete, refresh, create, update, move, remove, undo } =
-    useTasks(status, sort);
+    useTasks(activeList?.id ?? null, status, sort, lists.refresh);
+
+  useEffect(() => {
+    if (!activeList) return;
+    storeActiveList(activeList.id);
+    document.title = activeList.name;
+  }, [activeList?.id, activeList?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openTask = tasks?.find((t) => t.id === openId) ?? null;
 
   // If the open task drops out of the current view (e.g. marked done while filtering
-  // to Active), close the panel for good instead of letting it reappear later.
+  // to Active, or another list was opened), close the panel for good.
   useEffect(() => {
     if (openId !== null && tasks && !openTask) setOpenId(null);
   }, [openId, tasks, openTask]);
   const completedIds = tasks?.filter((t) => t.completed).map((t) => t.id) ?? [];
   // Manual order only makes sense when every task is visible in manual order.
   const reorderable = status === 'all' && sort === 'position';
+
+  const closeDrawerOnMobile = () => {
+    if (!isWide()) setSidebarOpen(false);
+  };
+
+  const selectList = (id: number) => {
+    setSelectedListId(id);
+    setOpenId(null);
+    closeDrawerOnMobile();
+  };
+
+  const createList = async () => {
+    const list = await lists.create('Untitled');
+    if (!list) return;
+    setJustCreatedListId(list.id);
+    selectList(list.id);
+  };
+
+  const deleteList = (list: List) => {
+    const visible = lists.lists ?? [];
+    if (visible.length <= 1) return;
+    if (list.id === activeList?.id) {
+      const index = visible.findIndex((l) => l.id === list.id);
+      const neighbour = visible[index + 1] ?? visible[index - 1];
+      if (neighbour) setSelectedListId(neighbour.id);
+    }
+    lists.remove([list.id], `Deleted “${list.name}”`);
+  };
 
   const openPanel = (task: Task) => {
     returnFocusTo.current = document.activeElement as HTMLElement | null;
@@ -79,16 +139,27 @@ export function App() {
   const clearCompleted = () =>
     remove(completedIds, `${completedIds.length} ${completedIds.length === 1 ? 'task' : 'tasks'} deleted`);
 
+  const undos: UndoToast[] = [];
+  if (lists.pendingDelete) undos.push({ key: 'list', message: lists.pendingDelete.message, onUndo: lists.undo });
+  if (pendingDelete) undos.push({ key: 'task', message: pendingDelete.message, onUndo: undo });
+
+  const failedToLoad = (lists.loadError && !lists.lists) || (loadError && !tasks);
+
   return (
     <div className="app">
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        taskCount={tasks && status === 'all' ? tasks.length : null}
+        lists={lists.lists ?? []}
+        activeId={activeList?.id ?? null}
+        onSelect={selectList}
+        onCreate={() => void createList()}
+        onDelete={deleteList}
       />
 
       <div className="main">
         <Topbar
+          title={activeList?.name ?? ''}
           sidebarOpen={sidebarOpen}
           onOpenSidebar={() => setSidebarOpen(true)}
           theme={theme}
@@ -99,7 +170,14 @@ export function App() {
           <div className="page-icon" aria-hidden="true">
             <TasksIcon width={56} height={56} strokeWidth={1} />
           </div>
-          <h1 className="page-title">Tasks</h1>
+          {activeList && (
+            <PageTitle
+              key={activeList.id}
+              name={activeList.name}
+              autoFocus={activeList.id === justCreatedListId}
+              onRename={(name) => void lists.rename(activeList.id, name)}
+            />
+          )}
 
           <div className="db-toolbar">
             <span className="view-tab">
@@ -131,10 +209,14 @@ export function App() {
             </div>
           </div>
 
-          {loadError && !tasks ? (
+          {failedToLoad ? (
             <div className="callout" role="alert">
               <span>Couldn’t load tasks. Is the API server running?</span>
-              <button type="button" className="text-button" onClick={() => void refresh()}>
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => void (lists.lists ? refresh() : lists.refresh())}
+              >
                 Retry
               </button>
             </div>
@@ -168,10 +250,12 @@ export function App() {
       )}
 
       <Toasts
-        undoMessage={pendingDelete?.message ?? null}
-        onUndo={undo}
-        saveError={saveError}
-        onDismissError={dismissSaveError}
+        undos={undos}
+        saveError={saveError || lists.saveError}
+        onDismissError={() => {
+          dismissSaveError();
+          lists.dismissSaveError();
+        }}
       />
     </div>
   );

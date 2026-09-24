@@ -34,6 +34,10 @@ export const reorderSchema = z.strictObject({
   ids: z.array(z.number().int().positive()).max(10_000),
 });
 
+const listName = z.string().trim().min(1, 'Name is required').max(100);
+export const createListSchema = z.strictObject({ name: listName });
+export const updateListSchema = z.strictObject({ name: listName });
+
 export const idParamSchema = z.coerce.number().int().positive();
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;

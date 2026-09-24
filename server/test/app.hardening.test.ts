@@ -11,18 +11,18 @@ const newApp = (options: Partial<Parameters<typeof createApp>[0]> = {}) =>
 
 describe('DNS rebinding protection (Host header allow-list)', () => {
   it('rejects requests addressed to a foreign host name', async () => {
-    const res = await request(newApp()).get('/api/tasks').set('Host', 'evil.example:3001');
+    const res = await request(newApp()).get('/api/lists').set('Host', 'evil.example:3001');
     expect(res.status).toBe(403);
   });
 
   it.each(['localhost:3001', '127.0.0.1:5173', '[::1]:3001'])('allows loopback host %s', async (host) => {
-    const res = await request(newApp()).get('/api/tasks').set('Host', host);
+    const res = await request(newApp()).get('/api/lists').set('Host', host);
     expect(res.status).toBe(200);
   });
 });
 
 describe('CSRF protection on state-changing requests', () => {
-  const post = (app = newApp()) => request(app).post('/api/tasks').set('Host', 'localhost:5173');
+  const post = (app = newApp()) => request(app).post('/api/lists/1/tasks').set('Host', 'localhost:5173');
 
   it('rejects a cross-origin form/fetch from another site', async () => {
     const res = await post().set('Origin', 'https://evil.example').send({ title: 'pwned' });
@@ -51,19 +51,19 @@ describe('CSRF protection on state-changing requests', () => {
 describe('rate limiting', () => {
   it('returns 429 once the write budget is spent, without limiting reads', async () => {
     const app = newApp({ writeRateLimit: { windowMs: 60_000, limit: 2 } });
-    await request(app).post('/api/tasks').send({ title: '1' });
-    await request(app).post('/api/tasks').send({ title: '2' });
+    await request(app).post('/api/lists/1/tasks').send({ title: '1' });
+    await request(app).post('/api/lists/1/tasks').send({ title: '2' });
 
-    const blocked = await request(app).post('/api/tasks').send({ title: '3' });
+    const blocked = await request(app).post('/api/lists/1/tasks').send({ title: '3' });
     expect(blocked.status).toBe(429);
     expect(blocked.headers['ratelimit-policy']).toBeDefined();
-    expect((await request(app).get('/api/tasks')).status).toBe(200);
+    expect((await request(app).get('/api/lists/1/tasks')).status).toBe(200);
   });
 });
 
 describe('API caching', () => {
   it('marks API responses as non-cacheable', async () => {
-    const res = await request(newApp()).get('/api/tasks');
+    const res = await request(newApp()).get('/api/lists/1/tasks');
     expect(res.headers['cache-control']).toBe('no-store');
   });
 });
