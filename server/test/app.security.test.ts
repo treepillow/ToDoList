@@ -14,7 +14,7 @@ describe('app security baseline', () => {
   it('sends hardening headers (nosniff, frame protection, CSP)', async () => {
     const res = await request(app).get('/api/health');
     expect(res.headers['x-content-type-options']).toBe('nosniff');
-    expect(res.headers['x-frame-options']).toBe('SAMEORIGIN');
+    expect(res.headers['x-frame-options']).toBe('DENY');
     expect(res.headers['content-security-policy']).toBeDefined();
   });
 
