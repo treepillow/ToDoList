@@ -32,11 +32,6 @@ export function tasksRouter(repo: TaskRepo) {
     res.status(201).json(repo.create(body.data));
   });
 
-  // Static paths must be registered before '/:id'.
-  router.delete('/completed', (_req, res) => {
-    res.json({ deleted: repo.removeCompleted() });
-  });
-
   router.put('/order', (req, res) => {
     const body = reorderSchema.safeParse(req.body);
     if (!body.success) return validationError(res, body.error);

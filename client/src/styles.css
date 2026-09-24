@@ -1,0 +1,857 @@
+/* ==========================================================================
+   Design tokens — values sampled from Notion's light & dark themes.
+   Default = light; dark applies via OS preference unless the user overrides
+   with data-theme (set by useTheme before first paint of the React tree).
+   ========================================================================== */
+:root {
+  color-scheme: light;
+  --font: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display', 'Segoe UI', Helvetica,
+    'Apple Color Emoji', Arial, sans-serif, 'Segoe UI Emoji', 'Segoe UI Symbol';
+
+  --bg: #ffffff;
+  --bg-sidebar: #f8f8f7;
+  --bg-popover: #ffffff;
+  --text: #37352f;
+  --text-secondary: rgba(55, 53, 47, 0.65);
+  --text-tertiary: rgba(55, 53, 47, 0.45);
+  --hover: rgba(55, 53, 47, 0.06);
+  --pressed: rgba(55, 53, 47, 0.1);
+  --divider: rgba(55, 53, 47, 0.09);
+  --accent: #2383e2;
+  --accent-soft: rgba(35, 131, 226, 0.1);
+  --danger: #eb5757;
+  --checkbox-border: rgba(55, 53, 47, 0.45);
+  --focus: rgba(35, 131, 226, 0.57);
+  --shadow-popover: rgba(15, 15, 15, 0.05) 0 0 0 1px, rgba(15, 15, 15, 0.1) 0 3px 6px,
+    rgba(15, 15, 15, 0.2) 0 9px 24px;
+
+  --tag-red-bg: #ffe2dd;
+  --tag-red-text: #5d1715;
+  --tag-yellow-bg: #fdecc8;
+  --tag-yellow-text: #402c1b;
+  --tag-gray-bg: #e3e2e0;
+  --tag-gray-text: #32302c;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #191919;
+  --bg-sidebar: #202020;
+  --bg-popover: #252525;
+  --text: rgba(255, 255, 255, 0.81);
+  --text-secondary: rgba(255, 255, 255, 0.46);
+  --text-tertiary: rgba(255, 255, 255, 0.28);
+  --hover: rgba(255, 255, 255, 0.055);
+  --pressed: rgba(255, 255, 255, 0.09);
+  --divider: rgba(255, 255, 255, 0.094);
+  --danger: #ff7369;
+  --checkbox-border: rgba(255, 255, 255, 0.36);
+  --shadow-popover: rgba(15, 15, 15, 0.1) 0 0 0 1px, rgba(15, 15, 15, 0.2) 0 3px 6px,
+    rgba(15, 15, 15, 0.4) 0 9px 24px;
+
+  --tag-red-bg: #522e2a;
+  --tag-red-text: #ffcfc9;
+  --tag-yellow-bg: #564328;
+  --tag-yellow-text: #ffdca1;
+  --tag-gray-bg: #373737;
+  --tag-gray-text: rgba(255, 255, 255, 0.81);
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
+
+/* ==========================================================================
+   Shell: sidebar + main column
+   ========================================================================== */
+.app {
+  display: flex;
+  height: 100%;
+}
+
+.sidebar {
+  flex: 0 0 240px;
+  width: 240px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--divider);
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 6px 8px;
+  transition: margin-left 200ms ease;
+}
+
+.sidebar[data-open='false'] {
+  margin-left: -240px;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 6px;
+  border-radius: 6px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.workspace-avatar {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--tag-gray-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.workspace-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Like Notion, the collapse control appears on hover of the sidebar. */
+.sidebar-close {
+  opacity: 0;
+}
+.sidebar:hover .sidebar-close,
+.sidebar-close:focus-visible {
+  opacity: 1;
+}
+
+.sidebar-label {
+  padding: 0 8px 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+  font-weight: 500;
+}
+.sidebar-item:hover {
+  background: var(--hover);
+}
+.sidebar-item[aria-current='page'] {
+  background: var(--pressed);
+  color: var(--text);
+}
+
+.sidebar-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.scrim {
+  display: none;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* ==========================================================================
+   Topbar
+   ========================================================================== */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 45px;
+  padding: 0 12px;
+  background: var(--bg);
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.breadcrumb,
+.visibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.visibility {
+  color: var(--text-secondary);
+}
+.visibility svg {
+  width: 13px;
+  height: 13px;
+}
+
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  transition: background 80ms ease;
+}
+.icon-button:hover {
+  background: var(--hover);
+}
+.icon-button:active {
+  background: var(--pressed);
+}
+.icon-button[data-active] {
+  color: var(--accent);
+}
+
+/* ==========================================================================
+   Page
+   ========================================================================== */
+.page {
+  width: min(708px, 100% - 2 * 24px);
+  margin: 0 auto;
+  padding: 72px 0 30vh;
+}
+
+.page-icon {
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.page-title {
+  margin: 0 0 20px;
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.db-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+  border-bottom: 1px solid var(--divider);
+  margin-bottom: 4px;
+}
+
+.view-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 8px 2px;
+  font-weight: 500;
+  box-shadow: inset 0 -2px 0 var(--text);
+}
+
+.db-actions {
+  display: flex;
+  gap: 2px;
+}
+
+/* ==========================================================================
+   Popover menu
+   ========================================================================== */
+.menu-root {
+  position: relative;
+}
+
+.popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 10;
+  min-width: 200px;
+  padding: 6px 0;
+  border-radius: 10px;
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-popover);
+  animation: popover-in 120ms ease-out;
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+.popover-heading {
+  padding: 4px 14px 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.popover-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: calc(100% - 8px);
+  height: 28px;
+  margin: 0 4px;
+  padding: 0 10px;
+  border-radius: 6px;
+  text-align: left;
+}
+.popover-item:hover,
+.popover-item:focus-visible {
+  background: var(--hover);
+  outline: none;
+}
+
+/* ==========================================================================
+   Task rows (Notion to-do block)
+   ========================================================================== */
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 3px 6px;
+  margin: 0 -6px;
+  border-radius: 6px;
+}
+.task-row:hover {
+  background: var(--hover);
+}
+
+.checkbox {
+  appearance: none;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  border: 1.5px solid var(--checkbox-border);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 80ms ease;
+}
+.checkbox:hover {
+  background: var(--hover);
+}
+.checkbox:checked {
+  border-color: var(--accent);
+  background: var(--accent)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E")
+    center / 12px no-repeat;
+}
+
+.task-title {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: text;
+}
+
+.title-input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  border: 0;
+  border-radius: 4px;
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  box-shadow: 0 0 0 1px var(--focus), 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
+.task-row[data-completed='true'] .task-title {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+  text-decoration-color: var(--text-tertiary);
+}
+
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  font-size: 12px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 3px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.tag[data-priority='high'] {
+  background: var(--tag-red-bg);
+  color: var(--tag-red-text);
+}
+.tag[data-priority='medium'] {
+  background: var(--tag-yellow-bg);
+  color: var(--tag-yellow-text);
+}
+.tag[data-priority='low'] {
+  background: var(--tag-gray-bg);
+  color: var(--tag-gray-text);
+}
+
+.due {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.due[data-overdue] {
+  color: var(--danger);
+}
+
+.empty {
+  margin: 0;
+  padding: 10px 0;
+  color: var(--text-tertiary);
+}
+
+.callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  background: var(--hover);
+}
+
+.text-button {
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--accent);
+  font-weight: 500;
+}
+.text-button:hover {
+  background: var(--accent-soft);
+}
+
+/* Row affordances: drag handle (left gutter) + actions (right), revealed on hover/focus */
+.task-row {
+  position: relative;
+}
+
+.drag-handle {
+  position: absolute;
+  left: -26px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--text-tertiary);
+  cursor: grab;
+  opacity: 0;
+}
+.drag-handle:hover {
+  background: var(--hover);
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.row-actions {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 6px;
+  background: var(--bg-popover);
+  box-shadow: 0 0 0 1px var(--divider), 0 2px 4px rgba(15, 15, 15, 0.08);
+  opacity: 0;
+  pointer-events: none;
+}
+.task-row:hover .row-actions,
+.task-row:focus-within .row-actions {
+  pointer-events: auto;
+}
+.row-actions .icon-button {
+  width: 24px;
+  height: 24px;
+}
+
+.task-row:hover .drag-handle,
+.task-row:hover .row-actions,
+.task-row:focus-within .row-actions,
+.drag-handle:focus-visible {
+  opacity: 1;
+}
+
+.task-list[data-dragging] .task-row:hover {
+  background: none;
+}
+
+/* Notion's blue drop indicator line */
+.task-row[data-drop]::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.task-row[data-drop='before']::after {
+  top: -2px;
+}
+.task-row[data-drop='after']::after {
+  bottom: -2px;
+}
+
+/* Touch devices have no hover: keep actions reachable. */
+@media (hover: none) {
+  .row-actions {
+    opacity: 1;
+  }
+}
+
+.new-task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 3px 6px;
+  margin: 0 -6px;
+  border-radius: 6px;
+  color: var(--text-tertiary);
+}
+.new-task:hover {
+  background: var(--hover);
+}
+.new-task input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 2px 0;
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  outline: none;
+}
+.new-task input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.text-button.subtle {
+  margin-right: 4px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  font-size: 13px;
+}
+.text-button.subtle:hover {
+  background: var(--hover);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==========================================================================
+   Side peek panel
+   ========================================================================== */
+.panel {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 30;
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  box-shadow: var(--shadow-popover);
+  outline: none;
+  animation: panel-in 180ms ease-out;
+}
+
+@keyframes panel-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+.panel-toolbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 48px 48px;
+}
+
+.panel-title,
+.panel-notes {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  resize: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  field-sizing: content;
+}
+
+.panel-title {
+  margin-bottom: 16px;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.properties {
+  margin: 0;
+}
+
+.property {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+}
+
+.property dt {
+  flex: 0 0 150px;
+  color: var(--text-secondary);
+}
+.property dt > * {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 6px;
+  margin-left: -6px;
+  border-radius: 4px;
+}
+
+.property dd {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+}
+
+.property-input {
+  height: 30px;
+  padding: 0 6px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.property-input:hover {
+  background: var(--hover);
+}
+.property-input[data-overdue] {
+  color: var(--danger);
+}
+select.property-input option {
+  background: var(--bg-popover);
+  color: var(--text);
+}
+
+.property-static {
+  color: var(--text-secondary);
+}
+
+.overdue-label {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.divider {
+  margin: 16px 0;
+  border: 0;
+  border-top: 1px solid var(--divider);
+}
+
+.panel-notes {
+  min-height: 200px;
+  line-height: 1.6;
+}
+.panel-notes::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ==========================================================================
+   Toasts
+   ========================================================================== */
+.toast-region {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 8px 8px 14px;
+  border-radius: 8px;
+  background: #2f2f2f;
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-popover);
+  animation: popover-in 160ms ease-out;
+}
+
+.toast-action {
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #7fb8f0;
+  font-weight: 500;
+}
+.toast-action:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ==========================================================================
+   Narrow screens: sidebar becomes an overlay drawer
+   ========================================================================== */
+@media (max-width: 767px) {
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 20;
+  }
+  .sidebar[data-open='true'] {
+    box-shadow: var(--shadow-popover);
+  }
+  .sidebar-close {
+    opacity: 1;
+  }
+  .scrim[data-open='true'] {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    background: rgba(15, 15, 15, 0.4);
+  }
+  .page {
+    padding-top: 40px;
+  }
+  .page-title {
+    font-size: 32px;
+  }
+  .visibility {
+    display: none;
+  }
+  .drag-handle {
+    display: none;
+  }
+  .panel-body {
+    padding: 16px 20px 40px;
+  }
+  .property dt {
+    flex-basis: 110px;
+  }
+}

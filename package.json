@@ -5,9 +5,12 @@
   "workspaces": ["server", "client"],
   "scripts": {
     "dev": "npm run dev --workspace server & npm run dev --workspace client",
+    "build": "npm run build --workspace client",
+    "start": "npm run build && npm start --workspace server",
     "test": "npm test --workspaces",
     "typecheck": "npm run typecheck --workspaces",
     "lint:secrets": "secretlint \"**/*\"",
+    "audit": "npm audit --audit-level=high",
     "prepare": "husky"
   },
   "devDependencies": {
