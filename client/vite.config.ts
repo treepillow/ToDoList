@@ -12,6 +12,5 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    passWithNoTests: true, // UI tests arrive in Stage 3
   },
 });
