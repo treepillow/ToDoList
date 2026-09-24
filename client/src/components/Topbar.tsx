@@ -2,13 +2,14 @@ import type { Theme } from '../hooks/useTheme';
 import { LockIcon, MoonIcon, SidebarIcon, SunIcon, TasksIcon } from './icons';
 
 interface Props {
+  title: string;
   sidebarOpen: boolean;
   onOpenSidebar: () => void;
   theme: Theme;
   onToggleTheme: () => void;
 }
 
-export function Topbar({ sidebarOpen, onOpenSidebar, theme, onToggleTheme }: Props) {
+export function Topbar({ title, sidebarOpen, onOpenSidebar, theme, onToggleTheme }: Props) {
   const nextTheme = theme === 'dark' ? 'light' : 'dark';
   return (
     <header className="topbar">
@@ -20,7 +21,7 @@ export function Topbar({ sidebarOpen, onOpenSidebar, theme, onToggleTheme }: Pro
         )}
         <span className="breadcrumb">
           <TasksIcon />
-          Tasks
+          <span className="breadcrumb-text">{title}</span>
         </span>
         <span className="visibility">
           <LockIcon />

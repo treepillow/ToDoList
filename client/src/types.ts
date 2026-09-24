@@ -24,3 +24,12 @@ export interface NewTask {
 }
 
 export type TaskChanges = Partial<Pick<Task, 'title' | 'notes' | 'priority' | 'dueDate' | 'completed'>>;
+
+export interface TaskList {
+  id: number;
+  name: string;
+  position: number;
+  /** Number of tasks in the list that are not completed. */
+  openCount: number;
+  createdAt: string;
+}

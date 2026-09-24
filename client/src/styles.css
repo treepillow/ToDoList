@@ -112,27 +112,36 @@ button {
 }
 
 .sidebar {
-  flex: 0 0 240px;
-  width: 240px;
+  --sidebar-width: 280px;
+  flex: 0 0 var(--sidebar-width);
+  width: var(--sidebar-width);
+  min-height: 0;
   background: var(--bg-sidebar);
   border-right: 1px solid var(--divider);
   color: var(--text-secondary);
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 6px 8px;
-  transition: margin-left 200ms ease;
+  gap: 20px;
+  padding: 8px 10px;
+  font-size: 15px;
+  transition: margin-left 200ms ease, transform 200ms ease;
 }
 
 .sidebar[data-open='false'] {
-  margin-left: -240px;
+  margin-left: calc(-1 * var(--sidebar-width));
+}
+
+.sidebar svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
 }
 
 .sidebar-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 36px;
+  gap: 10px;
+  height: 44px;
   padding: 0 6px;
   border-radius: 6px;
   color: var(--text);
@@ -142,12 +151,12 @@ button {
 .workspace-avatar {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
   background: var(--tag-gray-bg);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -159,30 +168,64 @@ button {
   text-overflow: ellipsis;
 }
 
-/* Like Notion, the collapse control appears on hover of the sidebar. */
-.sidebar-close {
+/* Like Notion, secondary controls appear on hover of the sidebar. */
+.sidebar-close,
+.sidebar-add-icon {
   opacity: 0;
 }
 .sidebar:hover .sidebar-close,
-.sidebar-close:focus-visible {
+.sidebar:hover .sidebar-add-icon,
+.sidebar-close:focus-visible,
+.sidebar-add-icon:focus-visible {
   opacity: 1;
 }
 
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 4px 10px;
+}
+
 .sidebar-label {
-  padding: 0 8px 4px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-tertiary);
+}
+
+.sidebar-add-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.sidebar-lists {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.sidebar-row {
+  position: relative;
 }
 
 .sidebar-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 30px;
-  padding: 0 8px;
+  gap: 10px;
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
   border-radius: 6px;
   color: inherit;
+  text-align: left;
   text-decoration: none;
   font-weight: 500;
 }
@@ -194,10 +237,51 @@ button {
   color: var(--text);
 }
 
+.sidebar-item-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .sidebar-count {
-  margin-left: auto;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-tertiary);
+}
+
+/* Delete button overlays the count on hover, like Notion's row actions. */
+.sidebar-row-action {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  opacity: 0;
+}
+.sidebar-row:hover .sidebar-row-action,
+.sidebar-row-action:focus-visible {
+  opacity: 1;
+}
+.sidebar-row:hover .sidebar-count {
+  visibility: hidden;
+}
+.sidebar-row-action:disabled {
+  cursor: not-allowed;
+  color: var(--text-tertiary);
+}
+.sidebar-row-action:disabled:hover {
+  background: none;
+}
+
+.sidebar-new {
+  margin-top: 2px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+.sidebar-new:hover {
+  color: var(--text-secondary);
 }
 
 .scrim {
@@ -293,6 +377,28 @@ button {
   line-height: 1.2;
   letter-spacing: -0.01em;
   color: var(--text);
+}
+
+.page-title-input {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  outline: none;
+  text-overflow: ellipsis;
+}
+.page-title-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.breadcrumb-text {
+  max-width: 40vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .db-toolbar {
@@ -587,8 +693,30 @@ button {
 
 /* Touch devices have no hover: keep actions reachable. */
 @media (hover: none) {
-  .row-actions {
+  .row-actions,
+  .sidebar-row-action,
+  .sidebar-add-icon {
     opacity: 1;
+  }
+  .row-actions {
+    pointer-events: auto;
+  }
+  /* No hover to reveal it, so place the delete button beside the count instead of over it. */
+  .sidebar-row {
+    display: flex;
+    align-items: center;
+  }
+  .sidebar-row > .sidebar-item {
+    flex: 1;
+    min-width: 0;
+  }
+  .sidebar-row-action {
+    position: static;
+    flex: none;
+    transform: none;
+  }
+  .sidebar-row:hover .sidebar-count {
+    visibility: visible;
   }
 }
 
@@ -819,9 +947,15 @@ select.property-input option {
    ========================================================================== */
 @media (max-width: 767px) {
   .sidebar {
+    --sidebar-width: min(300px, 85vw);
     position: fixed;
     inset: 0 auto 0 0;
     z-index: 20;
+  }
+  /* Slide the drawer instead of shifting layout. */
+  .sidebar[data-open='false'] {
+    margin-left: 0;
+    transform: translateX(-100%);
   }
   .sidebar[data-open='true'] {
     box-shadow: var(--shadow-popover);

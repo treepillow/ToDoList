@@ -1,11 +1,16 @@
-interface Props {
-  undoMessage: string | null;
+export interface UndoToast {
+  key: string;
+  message: string;
   onUndo: () => void;
+}
+
+interface Props {
+  undos: UndoToast[];
   saveError: boolean;
   onDismissError: () => void;
 }
 
-export function Toasts({ undoMessage, onUndo, saveError, onDismissError }: Props) {
+export function Toasts({ undos, saveError, onDismissError }: Props) {
   return (
     <div className="toast-region">
       {saveError && (
@@ -16,14 +21,14 @@ export function Toasts({ undoMessage, onUndo, saveError, onDismissError }: Props
           </button>
         </div>
       )}
-      {undoMessage && (
-        <div className="toast" role="status">
-          <span>{undoMessage}</span>
-          <button type="button" className="toast-action" onClick={onUndo}>
+      {undos.map((toast) => (
+        <div key={toast.key} className="toast" role="status">
+          <span>{toast.message}</span>
+          <button type="button" className="toast-action" onClick={toast.onUndo}>
             Undo
           </button>
         </div>
-      )}
+      ))}
     </div>
   );
 }
