@@ -131,19 +131,6 @@ describe('DELETE', () => {
     expect((await request(app).delete(`/api/tasks/${task.id}`)).status).toBe(204);
     expect((await request(app).delete(`/api/tasks/${task.id}`)).status).toBe(404);
   });
-
-  it('clears only completed tasks', async () => {
-    const { body: done } = await create({ title: 'Done' });
-    await create({ title: 'Open' });
-    await request(app).patch(`/api/tasks/${done.id}`).send({ completed: true });
-
-    const res = await request(app).delete('/api/tasks/completed');
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ deleted: 1 });
-    const list = await request(app).get('/api/tasks');
-    expect(list.body.map((t: { title: string }) => t.title)).toEqual(['Open']);
-  });
 });
 
 describe('PUT /api/tasks/order', () => {

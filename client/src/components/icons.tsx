@@ -92,3 +92,66 @@ export const ListIcon = () => (
     <circle cx="2.75" cy="12" r=".4" fill="currentColor" />
   </Icon>
 );
+
+export const PlusIcon = () => (
+  <Icon>
+    <path d="M8 3v10M3 8h10" />
+  </Icon>
+);
+
+export const TrashIcon = () => (
+  <Icon>
+    <path d="M2.75 4.25h10.5M6.25 4.25V2.75h3.5v1.5M4 4.25l.6 9h6.8l.6-9M6.75 6.75v4M9.25 6.75v4" />
+  </Icon>
+);
+
+/** Notion's "open in side peek" glyph. */
+export const OpenIcon = () => (
+  <Icon>
+    <path d="M9.5 2.5h4v4M13.5 2.5 9 7M6.5 13.5h-4v-4M2.5 13.5 7 9" />
+  </Icon>
+);
+
+export const DragIcon = () => (
+  <Icon stroke="none" fill="currentColor">
+    {[4, 8, 12].map((y) => (
+      <g key={y}>
+        <circle cx="6" cy={y} r="1.1" />
+        <circle cx="10" cy={y} r="1.1" />
+      </g>
+    ))}
+  </Icon>
+);
+
+export const ChevronsRightIcon = () => (
+  <Icon>
+    <path d="M8 4l4 4-4 4M3.5 4l4 4-4 4" />
+  </Icon>
+);
+
+export const CalendarIcon = () => (
+  <Icon>
+    <rect x="2.25" y="3.25" width="11.5" height="10.5" rx="1.75" />
+    <path d="M2.25 6.5h11.5M5.5 1.75v3M10.5 1.75v3" />
+  </Icon>
+);
+
+export const FlagIcon = () => (
+  <Icon>
+    <path d="M3.5 14V2.5M3.5 3h8l-1.75 3 1.75 3h-8" />
+  </Icon>
+);
+
+export const StatusIcon = () => (
+  <Icon>
+    <circle cx="8" cy="8" r="5.75" />
+    <path d="M5.5 8.25l1.75 1.75 3.25-3.75" />
+  </Icon>
+);
+
+export const ClockIcon = () => (
+  <Icon>
+    <circle cx="8" cy="8" r="5.75" />
+    <path d="M8 4.75V8l2.25 1.5" />
+  </Icon>
+);

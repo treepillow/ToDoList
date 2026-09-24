@@ -1,5 +1,6 @@
 // Mirrors the server's Task shape (server/src/tasks.repo.ts).
-export type Priority = 'low' | 'medium' | 'high';
+export const PRIORITIES = ['low', 'medium', 'high'] as const;
+export type Priority = (typeof PRIORITIES)[number];
 export type StatusFilter = 'all' | 'active' | 'completed';
 export type SortOrder = 'position' | 'due' | 'priority';
 

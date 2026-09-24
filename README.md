@@ -2,6 +2,15 @@
 
 A Notion-inspired to-do app. React + Vite + TypeScript frontend, Express 5 + SQLite backend.
 
+## Features
+
+- Add (Enter), rename inline (click title; Enter saves, Esc cancels), complete, delete with 5s undo
+- Side-peek panel for priority, due date and notes
+- Overdue tasks highlighted; filter (All / Active / Completed) and sort (Manual / Due date / Priority)
+- Drag-and-drop reordering (or focus the ⋮⋮ handle and use ↑/↓)
+- Light/dark theme following the OS, with a remembered manual toggle
+- Everything persists in SQLite
+
 ## Getting started
 
 ```bash
@@ -26,7 +35,6 @@ npm run dev          # API on :3001, UI on :5173 (proxied /api)
 | `POST /api/tasks` | Create `{ title, notes?, priority?, dueDate? }` |
 | `PATCH /api/tasks/:id` | Partial update, incl. `{ completed: true }`; `null` clears optional fields |
 | `DELETE /api/tasks/:id` | Delete one task |
-| `DELETE /api/tasks/completed` | Clear all completed tasks |
 | `PUT /api/tasks/order` | Save manual order `{ ids: [...] }` (must list every task once) |
 
 Validation errors return `400 { error: "Validation failed", details: [{ path, message }] }`.

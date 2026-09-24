@@ -112,10 +112,6 @@ export function createTaskRepo(db: Db) {
       return db.prepare('DELETE FROM tasks WHERE id = ?').run(id).changes > 0;
     },
 
-    removeCompleted(): number {
-      return db.prepare('DELETE FROM tasks WHERE completed = 1').run().changes;
-    },
-
     /** Returns false (and changes nothing) unless `ids` is exactly the set of existing task ids. */
     reorder: db.transaction((ids: number[]): boolean => {
       const existing = db.prepare<[], { id: number }>('SELECT id FROM tasks').all().map((r) => r.id);

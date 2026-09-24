@@ -30,7 +30,8 @@ export const api = {
     request<Task[]>(`/api/tasks?${new URLSearchParams({ status, sort })}`, { method: 'GET' }),
   createTask: (task: NewTask) => request<Task>('/api/tasks', send('POST', task)),
   updateTask: (id: number, changes: TaskChanges) => request<Task>(`/api/tasks/${id}`, send('PATCH', changes)),
-  deleteTask: (id: number) => request<void>(`/api/tasks/${id}`, { method: 'DELETE' }),
-  clearCompleted: () => request<{ deleted: number }>('/api/tasks/completed', { method: 'DELETE' }),
+  /** `keepalive` lets the request finish even if the page is being closed. */
+  deleteTask: (id: number, { keepalive = false } = {}) =>
+    request<void>(`/api/tasks/${id}`, keepalive ? { method: 'DELETE', keepalive } : { method: 'DELETE' }),
   reorder: (ids: number[]) => request<void>('/api/tasks/order', send('PUT', { ids })),
 };

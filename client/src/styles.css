@@ -393,13 +393,22 @@ button {
 }
 
 .checkbox {
+  appearance: none;
   flex: none;
+  display: grid;
+  place-items: center;
   width: 16px;
   height: 16px;
+  margin: 0;
   border: 1.5px solid var(--checkbox-border);
   border-radius: 3px;
+  cursor: pointer;
+  transition: background 80ms ease;
 }
-.checkbox[data-checked='true'] {
+.checkbox:hover {
+  background: var(--hover);
+}
+.checkbox:checked {
   border-color: var(--accent);
   background: var(--accent)
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E")
@@ -409,7 +418,24 @@ button {
 .task-title {
   flex: 1;
   min-width: 0;
+  padding: 2px 0;
+  text-align: left;
   overflow-wrap: anywhere;
+  cursor: text;
+}
+
+.title-input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  border: 0;
+  border-radius: 4px;
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  box-shadow: 0 0 0 1px var(--focus), 0 0 0 3px var(--accent-soft);
+  outline: none;
 }
 .task-row[data-completed='true'] .task-title {
   color: var(--text-tertiary);
@@ -451,6 +477,9 @@ button {
   color: var(--text-secondary);
   white-space: nowrap;
 }
+.due[data-overdue] {
+  color: var(--danger);
+}
 
 .empty {
   margin: 0;
@@ -477,6 +506,312 @@ button {
 }
 .text-button:hover {
   background: var(--accent-soft);
+}
+
+/* Row affordances: drag handle (left gutter) + actions (right), revealed on hover/focus */
+.task-row {
+  position: relative;
+}
+
+.drag-handle {
+  position: absolute;
+  left: -26px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--text-tertiary);
+  cursor: grab;
+  opacity: 0;
+}
+.drag-handle:hover {
+  background: var(--hover);
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.row-actions {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 6px;
+  background: var(--bg-popover);
+  box-shadow: 0 0 0 1px var(--divider), 0 2px 4px rgba(15, 15, 15, 0.08);
+  opacity: 0;
+  pointer-events: none;
+}
+.task-row:hover .row-actions,
+.task-row:focus-within .row-actions {
+  pointer-events: auto;
+}
+.row-actions .icon-button {
+  width: 24px;
+  height: 24px;
+}
+
+.task-row:hover .drag-handle,
+.task-row:hover .row-actions,
+.task-row:focus-within .row-actions,
+.drag-handle:focus-visible {
+  opacity: 1;
+}
+
+.task-list[data-dragging] .task-row:hover {
+  background: none;
+}
+
+/* Notion's blue drop indicator line */
+.task-row[data-drop]::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: 0.6;
+  pointer-events: none;
+}
+.task-row[data-drop='before']::after {
+  top: -2px;
+}
+.task-row[data-drop='after']::after {
+  bottom: -2px;
+}
+
+/* Touch devices have no hover: keep actions reachable. */
+@media (hover: none) {
+  .row-actions {
+    opacity: 1;
+  }
+}
+
+.new-task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 3px 6px;
+  margin: 0 -6px;
+  border-radius: 6px;
+  color: var(--text-tertiary);
+}
+.new-task:hover {
+  background: var(--hover);
+}
+.new-task input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  padding: 2px 0;
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  outline: none;
+}
+.new-task input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.text-button.subtle {
+  margin-right: 4px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  font-size: 13px;
+}
+.text-button.subtle:hover {
+  background: var(--hover);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ==========================================================================
+   Side peek panel
+   ========================================================================== */
+.panel {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 30;
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  box-shadow: var(--shadow-popover);
+  outline: none;
+  animation: panel-in 180ms ease-out;
+}
+
+@keyframes panel-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+.panel-toolbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 48px 48px;
+}
+
+.panel-title,
+.panel-notes {
+  display: block;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  resize: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  field-sizing: content;
+}
+
+.panel-title {
+  margin-bottom: 16px;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.properties {
+  margin: 0;
+}
+
+.property {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+}
+
+.property dt {
+  flex: 0 0 150px;
+  color: var(--text-secondary);
+}
+.property dt > * {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 6px;
+  margin-left: -6px;
+  border-radius: 4px;
+}
+
+.property dd {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+}
+
+.property-input {
+  height: 30px;
+  padding: 0 6px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.property-input:hover {
+  background: var(--hover);
+}
+.property-input[data-overdue] {
+  color: var(--danger);
+}
+select.property-input option {
+  background: var(--bg-popover);
+  color: var(--text);
+}
+
+.property-static {
+  color: var(--text-secondary);
+}
+
+.overdue-label {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+.divider {
+  margin: 16px 0;
+  border: 0;
+  border-top: 1px solid var(--divider);
+}
+
+.panel-notes {
+  min-height: 200px;
+  line-height: 1.6;
+}
+.panel-notes::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ==========================================================================
+   Toasts
+   ========================================================================== */
+.toast-region {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 8px 8px 14px;
+  border-radius: 8px;
+  background: #2f2f2f;
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow-popover);
+  animation: popover-in 160ms ease-out;
+}
+
+.toast-action {
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: #7fb8f0;
+  font-weight: 500;
+}
+.toast-action:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* ==========================================================================
@@ -509,5 +844,14 @@ button {
   }
   .visibility {
     display: none;
+  }
+  .drag-handle {
+    display: none;
+  }
+  .panel-body {
+    padding: 16px 20px 40px;
+  }
+  .property dt {
+    flex-basis: 110px;
   }
 }
