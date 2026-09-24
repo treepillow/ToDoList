@@ -1,7 +1,10 @@
 import express, { type ErrorRequestHandler } from 'express';
 import helmet from 'helmet';
+import type { Db } from './db.js';
+import { createTaskRepo } from './tasks.repo.js';
+import { tasksRouter } from './tasks.routes.js';
 
-export function createApp() {
+export function createApp({ db }: { db: Db }) {
   const app = express();
 
   app.disable('x-powered-by');
@@ -12,6 +15,8 @@ export function createApp() {
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });
   });
+
+  app.use('/api/tasks', tasksRouter(createTaskRepo(db)));
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'Not found' });

@@ -18,9 +18,25 @@ npm run dev          # API on :3001, UI on :5173 (proxied /api)
 | `npm run typecheck` | Strict TypeScript check across workspaces |
 | `npm run lint:secrets` | Scan the repo for committed secrets |
 
+## API
+
+| Method & path | Description |
+| --- | --- |
+| `GET /api/tasks?status=all\|active\|completed&sort=position\|due\|priority` | List tasks |
+| `POST /api/tasks` | Create `{ title, notes?, priority?, dueDate? }` |
+| `PATCH /api/tasks/:id` | Partial update, incl. `{ completed: true }`; `null` clears optional fields |
+| `DELETE /api/tasks/:id` | Delete one task |
+| `DELETE /api/tasks/completed` | Clear all completed tasks |
+| `PUT /api/tasks/order` | Save manual order `{ ids: [...] }` (must list every task once) |
+
+Validation errors return `400 { error: "Validation failed", details: [{ path, message }] }`.
+
 ## Security (shift-left)
 
 - Pre-commit hook runs **secretlint** on staged files and blocks the commit if a secret is found.
 - `.env*`, SQLite `*.db` files and key material are gitignored; only `.env.example` is committed.
 - API: `helmet` security headers, `x-powered-by` disabled, 10 KB JSON body limit, generic error
   responses (no stack traces), server bound to `127.0.0.1`.
+- Input validated with strict Zod schemas (unknown fields rejected — no mass assignment); SQLite
+  `CHECK` constraints enforce the same rules as a second layer.
+- All SQL uses bound parameters; sort/filter options map to fixed SQL fragments via allow-lists.

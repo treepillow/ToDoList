@@ -1,9 +1,10 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
+import { openDb } from '../src/db.js';
 
 describe('app security baseline', () => {
-  const app = createApp();
+  const app = createApp({ db: openDb(':memory:') });
 
   it('does not leak the framework via X-Powered-By', async () => {
     const res = await request(app).get('/api/health');
