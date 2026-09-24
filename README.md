@@ -84,4 +84,4 @@ The threats it defends against are **other websites you visit** trying to reach 
 | Abuse / runaway clients | 10 KB body limit; write rate limit (600/min) |
 | Information leakage | Generic error bodies (no stack traces); `x-powered-by` off; `Cache-Control: no-store` on API; `Referrer-Policy: no-referrer` |
 | Secrets in git | Pre-commit **secretlint** hook + CI scan; `.env*`, `*.db`, key files gitignored |
-| Vulnerable / tampered dependencies | `npm ci` from lockfile, `npm audit` in CI, Dependabot, GitHub Actions pinned to commit SHAs, workflow token read-only |
+| Vulnerable / tampered dependencies | `npm ci` from lockfile, `npm audit` in CI, GitHub Actions pinned to commit SHAs, workflow token read-only |
