@@ -15,7 +15,7 @@ interface Props {
   tasks: Task[];
   status: StatusFilter;
   reorderable: boolean;
-  onCreate: (task: NewTask) => void;
+  onCreate: (task: NewTask) => Promise<boolean>;
   onUpdate: (id: number, changes: TaskChanges) => void;
   onDelete: (task: Task) => void;
   onOpen: (task: Task) => void;
@@ -94,15 +94,16 @@ export function TaskList({ tasks, status, reorderable, onCreate, onUpdate, onDel
   );
 }
 
-function NewTaskInput({ onCreate }: { onCreate: (task: NewTask) => void }) {
+function NewTaskInput({ onCreate }: { onCreate: (task: NewTask) => Promise<boolean> }) {
   const [title, setTitle] = useState('');
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const trimmed = title.trim();
     if (!trimmed) return;
-    setTitle('');
-    onCreate({ title: trimmed });
+    setTitle(''); // clear immediately so the next task can be typed
+    // If saving failed, give the text back — unless the user already started a new one.
+    if (!(await onCreate({ title: trimmed }))) setTitle((current) => current || trimmed);
   };
 
   return (

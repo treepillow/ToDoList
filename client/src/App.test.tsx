@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
@@ -56,6 +56,18 @@ describe('adding tasks', () => {
     expect(input).toHaveValue('');
     expect(input).toHaveFocus();
     expect(server.tasks.map((t) => t.title)).toEqual(['Revise stacks']);
+  });
+
+  it('keeps the typed title when saving fails, so nothing is lost', async () => {
+    const server = fakeServer();
+    const user = await renderApp();
+    const input = screen.getByRole('textbox', { name: 'New task' });
+
+    server.failNext();
+    await user.type(input, 'Lab report{Enter}');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/couldn.t save/i);
+    expect(input).toHaveValue('Lab report');
   });
 
   it('ignores blank input', async () => {
@@ -119,6 +131,25 @@ describe('editing tasks', () => {
     await waitFor(() =>
       expect(server.tasks[0]).toMatchObject({ priority: 'high', dueDate: '2026-10-05', notes: 'Min 2000 words' }),
     );
+    // Close and unmount both try to save drafts; the notes must only be sent once.
+    const notePatches = server.calls.filter((c) => c.method === 'PATCH' && (c.body as { notes?: string }).notes);
+    expect(notePatches).toHaveLength(1);
+  });
+
+  it('closes the panel for good when its task leaves the filtered view', async () => {
+    fakeServer([{ title: 'Essay' }]);
+    const user = await renderApp();
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'Active' }));
+
+    await user.click(await screen.findByRole('button', { name: 'Open: Essay' }));
+    await user.click(within(screen.getByRole('dialog')).getByLabelText('Done'));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
+    await user.click(screen.getByRole('menuitemradio', { name: 'All tasks' }));
+    await screen.findByRole('button', { name: 'Edit title: Essay' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('reverts an optimistic change and tells the user when saving fails', async () => {
@@ -180,6 +211,45 @@ describe('deleting tasks', () => {
     await user.click(screen.getByRole('button', { name: 'Clear completed' }));
     expect(rowTitles()).toEqual(['Open']);
     expect(screen.getByRole('status')).toHaveTextContent('2 tasks deleted');
+  });
+});
+
+describe('focus after deleting', () => {
+  it('moves focus to the next task when a row is deleted', async () => {
+    fakeServer([{ title: 'A' }, { title: 'B' }]);
+    const user = await renderApp();
+
+    await user.click(screen.getByRole('button', { name: 'Delete: A' }));
+
+    expect(screen.getByRole('button', { name: 'Edit title: B' })).toHaveFocus();
+  });
+
+  it('moves focus back into the list when deleting from the panel', async () => {
+    fakeServer([{ title: 'A' }, { title: 'B' }]);
+    const user = await renderApp();
+
+    await user.click(screen.getByRole('button', { name: 'Open: B' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete: B' }));
+
+    expect(screen.getByRole('button', { name: 'Edit title: A' })).toHaveFocus();
+  });
+
+  it('falls back to the new-task input when the last task is deleted', async () => {
+    fakeServer([{ title: 'Only' }]);
+    const user = await renderApp();
+
+    await user.click(screen.getByRole('button', { name: 'Delete: Only' }));
+
+    expect(screen.getByRole('textbox', { name: 'New task' })).toHaveFocus();
+  });
+});
+
+describe('navigation', () => {
+  it('does not reload the page when the current page is clicked in the sidebar', async () => {
+    fakeServer();
+    await renderApp();
+    const link = screen.getByRole('link', { name: /tasks/i, hidden: true }); // sidebar starts closed on narrow test viewport
+    expect(fireEvent.click(link)).toBe(false); // false = default navigation was prevented
   });
 });
 
