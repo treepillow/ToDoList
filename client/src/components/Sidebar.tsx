@@ -22,7 +22,7 @@ export function Sidebar({ open, onClose, taskCount }: Props) {
 
         <div className="sidebar-section">
           <div className="sidebar-label">Private</div>
-          <a className="sidebar-item" href="/" aria-current="page">
+          <a className="sidebar-item" href="/" aria-current="page" onClick={(e) => e.preventDefault()}>
             <TasksIcon />
             <span>Tasks</span>
             {taskCount !== null && <span className="sidebar-count">{taskCount}</span>}

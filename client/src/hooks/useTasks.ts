@@ -60,15 +60,18 @@ export function useTasks(status: StatusFilter, sort: SortOrder) {
   );
 
   const create = useCallback(
-    async (task: NewTask) => {
+    async (task: NewTask): Promise<boolean> => {
+      let ok = true;
       try {
         const created = await api.createTask(task);
         setTasks((current) => current && [...current, created]);
         setSaveError(false);
       } catch {
         setSaveError(true);
+        ok = false;
       }
       await refresh();
+      return ok;
     },
     [refresh],
   );

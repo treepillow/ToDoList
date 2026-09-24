@@ -1,12 +1,22 @@
-const dateFormat = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
-const dateFormatWithYear = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+// A YYYY-MM-DD value is a calendar day, not an instant: format it in UTC on both
+// sides so the output never shifts with the user's timezone.
+const dateFormat = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
+const dateFormatWithYear = new Intl.DateTimeFormat(undefined, {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
 
 /** Formats a YYYY-MM-DD date like Notion ("Sep 30"), adding the year only when it differs. */
 export function formatDueDate(isoDate: string, today = new Date()): string {
   const [y, m, d] = isoDate.split('-').map(Number);
-  const date = new Date(y!, m! - 1, d!); // local midnight — avoids UTC off-by-one
+  const date = new Date(Date.UTC(y!, m! - 1, d!));
   return (y === today.getFullYear() ? dateFormat : dateFormatWithYear).format(date);
 }
+
+/** Formats an ISO timestamp (e.g. createdAt, stored in UTC) as the user's local calendar day. */
+export const formatTimestamp = (iso: string, today = new Date()) => formatDueDate(localISODate(new Date(iso)), today);
 
 const pad = (n: number) => String(n).padStart(2, '0');
 

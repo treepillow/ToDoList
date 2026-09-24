@@ -116,6 +116,7 @@ export function TaskRow({ task, reorderable, dropPlacement, onUpdate, onDelete, 
           ref={titleButtonRef}
           type="button"
           className="task-title"
+          data-title-for={task.id}
           aria-label={`Edit title: ${task.title}`}
           onClick={startEditing}
         >

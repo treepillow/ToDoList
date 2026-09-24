@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { OptionsMenu } from './components/OptionsMenu';
 import { Sidebar } from './components/Sidebar';
 import { TaskList } from './components/TaskList';
@@ -36,6 +36,12 @@ export function App() {
     useTasks(status, sort);
 
   const openTask = tasks?.find((t) => t.id === openId) ?? null;
+
+  // If the open task drops out of the current view (e.g. marked done while filtering
+  // to Active), close the panel for good instead of letting it reappear later.
+  useEffect(() => {
+    if (openId !== null && tasks && !openTask) setOpenId(null);
+  }, [openId, tasks, openTask]);
   const completedIds = tasks?.filter((t) => t.completed).map((t) => t.id) ?? [];
   // Manual order only makes sense when every task is visible in manual order.
   const reorderable = status === 'all' && sort === 'position';
@@ -50,7 +56,22 @@ export function App() {
     if (returnFocusTo.current?.isConnected) returnFocusTo.current.focus();
   };
 
+  // After a delete, the focused control is gone; move focus to a neighbouring row
+  // (or the new-task input) so keyboard and screen-reader users keep their place.
+  const focusAfterDelete = useRef<number | 'new-task' | null>(null);
+  useEffect(() => {
+    const target = focusAfterDelete.current;
+    if (target === null) return;
+    focusAfterDelete.current = null;
+    const selector = target === 'new-task' ? 'input[aria-label="New task"]' : `[data-title-for="${target}"]`;
+    document.querySelector<HTMLElement>(selector)?.focus();
+  });
+
   const deleteTask = (task: Task) => {
+    const list = tasks ?? [];
+    const index = list.findIndex((t) => t.id === task.id);
+    const neighbour = list[index + 1] ?? list[index - 1];
+    focusAfterDelete.current = neighbour ? neighbour.id : 'new-task';
     if (task.id === openId) setOpenId(null);
     remove([task.id], 'Task deleted');
   };
@@ -126,7 +147,7 @@ export function App() {
               tasks={tasks}
               status={status}
               reorderable={reorderable}
-              onCreate={(task) => void create(task)}
+              onCreate={create}
               onUpdate={(id, changes) => void update(id, changes)}
               onDelete={deleteTask}
               onOpen={openPanel}

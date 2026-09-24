@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { formatDueDate, isOverdue } from '../format';
+import { formatTimestamp, isOverdue } from '../format';
 import { PRIORITIES, type Priority, type Task, type TaskChanges } from '../types';
 import { CalendarIcon, ChevronsRightIcon, ClockIcon, FlagIcon, StatusIcon, TrashIcon } from './icons';
 import { PRIORITY_LABEL } from './TaskRow';
@@ -17,16 +17,24 @@ export function TaskPanel({ task, onUpdate, onDelete, onClose }: Props) {
   const [notes, setNotes] = useState(task.notes);
   const panelRef = useRef<HTMLElement>(null);
 
-  // Text fields save on blur/close rather than per keystroke.
-  const latest = useRef({ title, notes, task });
-  latest.current = { title, notes, task };
+  // Text fields save on blur/close/unmount rather than per keystroke. `saved` tracks
+  // what was last sent, so the several triggers never send the same change twice.
+  const latest = useRef({ title, notes });
+  latest.current = { title, notes };
+  const saved = useRef({ title: task.title, notes: task.notes });
   const flushText = () => {
-    const { title, notes, task } = latest.current;
+    const { title, notes } = latest.current;
     const changes: TaskChanges = {};
-    if (title.trim() && title.trim() !== task.title) changes.title = title.trim();
-    if (notes !== task.notes) changes.notes = notes;
-    if (Object.keys(changes).length) onUpdate(task.id, changes);
+    if (title.trim() && title.trim() !== saved.current.title) changes.title = title.trim();
+    if (notes !== saved.current.notes) changes.notes = notes;
+    if (Object.keys(changes).length === 0) return;
+    saved.current = { title: changes.title ?? saved.current.title, notes };
+    onUpdate(task.id, changes);
   };
+  const flushRef = useRef(flushText);
+  flushRef.current = flushText;
+  // The panel can also unmount without a close (task deleted or filtered out): save drafts then too.
+  useEffect(() => () => flushRef.current(), []);
 
   const close = () => {
     flushText();
@@ -116,7 +124,7 @@ export function TaskPanel({ task, onUpdate, onDelete, onClose }: Props) {
           </Property>
 
           <Property icon={<ClockIcon />} label="Created">
-            <span className="property-static">{formatDueDate(task.createdAt.slice(0, 10))}</span>
+            <span className="property-static">{formatTimestamp(task.createdAt)}</span>
           </Property>
         </dl>
 
