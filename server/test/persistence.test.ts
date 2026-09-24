@@ -14,11 +14,11 @@ it('keeps tasks after the database is closed and reopened', async () => {
   const file = join(dir, 'todos.db');
 
   const first = openDb(file);
-  await request(createApp({ db: first })).post('/api/tasks').send({ title: 'Survive restart' });
+  await request(createApp({ db: first })).post('/api/lists/1/tasks').send({ title: 'Survive restart' });
   first.close();
 
   const second = openDb(file);
-  const res = await request(createApp({ db: second })).get('/api/tasks');
+  const res = await request(createApp({ db: second })).get('/api/lists/1/tasks');
   second.close();
 
   expect(res.body.map((t: { title: string }) => t.title)).toEqual(['Survive restart']);

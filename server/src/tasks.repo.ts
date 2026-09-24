@@ -40,8 +40,8 @@ const toTask = (row: TaskRow): Task => ({
 // Only these fixed SQL fragments can ever reach a query; user input never does.
 const WHERE: Record<ListQuery['status'], string> = {
   all: '',
-  active: 'WHERE completed = 0',
-  completed: 'WHERE completed = 1',
+  active: 'AND completed = 0',
+  completed: 'AND completed = 1',
 };
 const ORDER_BY: Record<ListQuery['sort'], string> = {
   position: 'position, id',
@@ -67,21 +67,22 @@ export function createTaskRepo(db: Db) {
   return {
     get,
 
-    list({ status, sort }: ListQuery): Task[] {
+    list(listId: number, { status, sort }: ListQuery): Task[] {
       const rows = db
-        .prepare<[], TaskRow>(`SELECT * FROM tasks ${WHERE[status]} ORDER BY ${ORDER_BY[sort]}`)
-        .all();
+        .prepare<[number], TaskRow>(`SELECT * FROM tasks WHERE list_id = ? ${WHERE[status]} ORDER BY ${ORDER_BY[sort]}`)
+        .all(listId);
       return rows.map(toTask);
     },
 
-    create(input: CreateTaskInput): Task {
+    create(listId: number, input: CreateTaskInput): Task {
       const { lastInsertRowid } = db
         .prepare(
-          `INSERT INTO tasks (title, notes, priority, due_date, position)
-           VALUES (@title, @notes, @priority, @dueDate,
-                   (SELECT COALESCE(MAX(position), 0) + 1 FROM tasks))`,
+          `INSERT INTO tasks (list_id, title, notes, priority, due_date, position)
+           VALUES (@listId, @title, @notes, @priority, @dueDate,
+                   (SELECT COALESCE(MAX(position), 0) + 1 FROM tasks WHERE list_id = @listId))`,
         )
         .run({
+          listId,
           title: input.title,
           notes: input.notes ?? '',
           priority: input.priority ?? null,
@@ -112,9 +113,12 @@ export function createTaskRepo(db: Db) {
       return db.prepare('DELETE FROM tasks WHERE id = ?').run(id).changes > 0;
     },
 
-    /** Returns false (and changes nothing) unless `ids` is exactly the set of existing task ids. */
-    reorder: db.transaction((ids: number[]): boolean => {
-      const existing = db.prepare<[], { id: number }>('SELECT id FROM tasks').all().map((r) => r.id);
+    /** Returns false (and changes nothing) unless `ids` is exactly the set of the list's task ids. */
+    reorder: db.transaction((listId: number, ids: number[]): boolean => {
+      const existing = db
+        .prepare<[number], { id: number }>('SELECT id FROM tasks WHERE list_id = ?')
+        .all(listId)
+        .map((r) => r.id);
       const unique = new Set(ids);
       if (unique.size !== ids.length || ids.length !== existing.length) return false;
       if (!existing.every((id) => unique.has(id))) return false;

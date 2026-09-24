@@ -10,9 +10,9 @@ beforeEach(() => {
   app = createApp({ db: openDb(':memory:') });
 });
 
-const create = (body: Record<string, unknown>) => request(app).post('/api/tasks').send(body);
+const create = (body: Record<string, unknown>) => request(app).post('/api/lists/1/tasks').send(body);
 
-describe('POST /api/tasks', () => {
+describe('POST /api/lists/:listId/tasks', () => {
   it('creates a task with sensible defaults and a trimmed title', async () => {
     const res = await create({ title: '  Revise stacks  ' });
 
@@ -53,13 +53,13 @@ describe('POST /api/tasks', () => {
     const title = "x'); DROP TABLE tasks; --";
     await create({ title });
 
-    const list = await request(app).get('/api/tasks');
+    const list = await request(app).get('/api/lists/1/tasks');
     expect(list.status).toBe(200);
     expect(list.body[0].title).toBe(title);
   });
 });
 
-describe('GET /api/tasks', () => {
+describe('GET /api/lists/:listId/tasks', () => {
   beforeEach(async () => {
     await create({ title: 'Low, late', priority: 'low', dueDate: '2026-12-01' });
     await create({ title: 'No due date', priority: 'high' });
@@ -70,30 +70,30 @@ describe('GET /api/tasks', () => {
   const titles = (res: request.Response) => res.body.map((t: { title: string }) => t.title);
 
   it('lists tasks in manual (position) order by default', async () => {
-    const res = await request(app).get('/api/tasks');
+    const res = await request(app).get('/api/lists/1/tasks');
     expect(titles(res)).toEqual(['Low, late', 'No due date', 'Done early']);
   });
 
   it('filters by status', async () => {
-    const active = await request(app).get('/api/tasks?status=active');
-    const completed = await request(app).get('/api/tasks?status=completed');
+    const active = await request(app).get('/api/lists/1/tasks?status=active');
+    const completed = await request(app).get('/api/lists/1/tasks?status=completed');
     expect(titles(active)).toEqual(['Low, late', 'No due date']);
     expect(titles(completed)).toEqual(['Done early']);
   });
 
   it('sorts by due date with undated tasks last', async () => {
-    const res = await request(app).get('/api/tasks?sort=due');
+    const res = await request(app).get('/api/lists/1/tasks?sort=due');
     expect(titles(res)).toEqual(['Done early', 'Low, late', 'No due date']);
   });
 
   it('sorts by priority, highest first', async () => {
-    const res = await request(app).get('/api/tasks?sort=priority');
+    const res = await request(app).get('/api/lists/1/tasks?sort=priority');
     expect(titles(res)).toEqual(['No due date', 'Done early', 'Low, late']);
   });
 
   it('rejects unknown filter/sort values', async () => {
-    expect((await request(app).get('/api/tasks?status=everything')).status).toBe(400);
-    expect((await request(app).get('/api/tasks?sort=title;DROP')).status).toBe(400);
+    expect((await request(app).get('/api/lists/1/tasks?status=everything')).status).toBe(400);
+    expect((await request(app).get('/api/lists/1/tasks?sort=title;DROP')).status).toBe(400);
   });
 });
 
@@ -133,15 +133,15 @@ describe('DELETE', () => {
   });
 });
 
-describe('PUT /api/tasks/order', () => {
+describe('PUT /api/lists/:listId/tasks/order', () => {
   it('persists a new manual order', async () => {
     const ids = [];
     for (const title of ['A', 'B', 'C']) ids.push((await create({ title })).body.id);
 
-    const res = await request(app).put('/api/tasks/order').send({ ids: [ids[2], ids[0], ids[1]] });
+    const res = await request(app).put('/api/lists/1/tasks/order').send({ ids: [ids[2], ids[0], ids[1]] });
 
     expect(res.status).toBe(204);
-    const list = await request(app).get('/api/tasks');
+    const list = await request(app).get('/api/lists/1/tasks');
     expect(list.body.map((t: { title: string }) => t.title)).toEqual(['C', 'A', 'B']);
   });
 
@@ -153,7 +153,7 @@ describe('PUT /api/tasks/order', () => {
     const ids: number[] = [];
     for (const title of ['A', 'B', 'C']) ids.push((await create({ title })).body.id);
 
-    const res = await request(app).put('/api/tasks/order').send({ ids: mutate(ids) });
+    const res = await request(app).put('/api/lists/1/tasks/order').send({ ids: mutate(ids) });
     expect(res.status).toBe(400);
   });
 });
