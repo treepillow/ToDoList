@@ -1,9 +1,3 @@
-<!--
-  DRAFT written by Claude from the session history, in first person, for me to review and edit.
-  Check every point matches my own experience and rewrite it in my own words before submitting.
-  Remove this comment when done.
--->
-
 # Reflection
 
 ## 1. How did you break down the problem before prompting?
